@@ -1,0 +1,971 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>잠실 맘마지도</title>
+<style>/* required styles */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+/* Prevents IE11 from highlighting tiles in blue */
+.leaflet-tile::selection {
+	background: transparent;
+}
+/* Safari renders non-retina tile on retina better with this, but Chrome is worse */
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+/* hack that prevents hw layers "stretching" when loading new tiles */
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+/* .leaflet-container svg: reset svg max-width decleration shipped in Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: map is broken in FF if you have max-width: 100% on tiles */
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	/* Fallback for FF which doesn't support pinch-zoom */
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	behavior: url(#default#VML);
+	display: inline-block;
+	position: absolute;
+	}
+
+
+/* control positioning */
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+/* zoom and fade animations */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+/* cursors */
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+/* marker & overlays interactivity */
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+
+/* visual tweaks */
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+/* general typography */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+/* general toolbar styles */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+/* zoom control */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+/* layers control */
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	background-image: none;
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-image: none;
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+/* Default icon URLs */
+.leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
+	background-image: none;
+	}
+
+
+/* attribution and scale controls */
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+/* popup */
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+/* div icon */
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+/* Tooltip */
+/* Base styles for the element that has a tooltip */
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+/* Directions */
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+/* Printing */
+
+@media print {
+	/* Prevent printers from removing background-images of controls. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
+
+
+:root{--g0:#f08e86;--g1:#a3cf6e;--g2:#86c8ec;--t0:#b9483f;--t1:#4c7d1f;--t2:#2a7aa8;--g3:#c2abec;--t3:#6b4fae;--ink:#272018;--muted:#60574c;--paper:#faf6ec}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 system-ui,sans-serif}main{max-width:1200px;margin:auto;padding:36px 24px 60px}header{border-top:5px solid var(--ink);padding-top:20px;margin-bottom:24px}h1{font-size:clamp(36px,6vw,68px);letter-spacing:-.075em;line-height:1.12;margin:0 0 10px}header p{margin:0;color:var(--muted)}.layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,1fr);gap:30px;align-items:start}.map-panel{position:sticky;top:20px}h2{font-size:19px;margin:0 0 12px}.map{isolation:isolate;position:relative;aspect-ratio:4/5;border:1px solid #cfc5b2;border-radius:18px;background-color:#f3edde;background-image:linear-gradient(#d8cebd 1px,transparent 1px),linear-gradient(90deg,#d8cebd 1px,transparent 1px);background-size:12.5% 10%}.north{position:absolute;right:14px;top:10px;font-weight:700;text-align:center;line-height:1.2}.scale{position:absolute;left:12px;bottom:12px;width:25%;border-bottom:2px solid var(--ink);font-size:12px;text-align:center}.pin,.badge{background:var(--pin);color:white;font-weight:800;display:grid;place-items:center}.pin{position:absolute;transform:translate(-50%,-50%);width:clamp(19px,3.1vw,30px);height:clamp(19px,3.1vw,30px);border-radius:50%;text-decoration:none;font-size:clamp(9px,1.45vw,13px);outline:2px solid var(--paper);box-shadow:0 2px 5px #3228}.pin:hover,.pin:focus-visible{z-index:1;outline:3px solid var(--ink)}.pin[hidden],article[hidden]{display:none}.note{font-size:13px;color:var(--muted);margin:10px 0}.filters{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 14px}button{font:inherit;font-size:13px;border:1px solid #cfc5b2;border-radius:18px;padding:6px 10px;background:#fffcf7;color:var(--ink);cursor:pointer}button[aria-pressed=true]{background:var(--ink);color:white}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color);margin-right:5px}.cards{display:grid;gap:9px}article{scroll-margin-top:12px;background:#fffcf7;border:1px solid #e6ddcc;border-radius:13px;padding:12px 14px}article:target{outline:2px solid var(--pin)}.line{display:flex;gap:9px;align-items:start}.badge{border-radius:6px;min-width:25px;height:25px;font-size:12px}h3{font-size:17px;margin:0;line-height:1.3}strong{font-size:13px;color:var(--pin)}article p{margin:5px 0 0;font-size:13px;color:var(--muted)}article a{display:inline-block;margin-top:6px;color:var(--pin);font-size:13px;font-weight:bold}a:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}@media(max-width:720px){main{padding:22px 14px 35px}.layout{grid-template-columns:1fr;gap:18px}.map-panel{position:static}.map{max-width:500px}.pin{width:clamp(19px,5.5vw,27px);height:clamp(19px,5.5vw,27px);font-size:11px}}@media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+.layout{grid-template-columns:minmax(0,1.65fr) minmax(290px,1fr);gap:24px}
+.map{aspect-ratio:1500/1020;background:#eae4d9;overflow:hidden}
+.basemap{position:absolute;inset:0;width:100%;height:100%;display:block}
+.scale{width:12.1%;background:#fffcf4d9}
+.credit{position:absolute;right:0;bottom:0;background:#fffcf4e8;padding:2px 6px;font-size:9px;color:#3a3f39}
+.north{background:#fffcf4e8;border-radius:8px;padding:5px 7px;font-size:12px}
+.pin{width:clamp(17px,2.5vw,25px);height:clamp(17px,2.5vw,25px);font-size:12px;outline-width:1.5px}
+.pin.selected{z-index:3;outline:3px solid #2c2119}
+.dish-icon{margin-left:auto;font-size:27px;line-height:1}
+.dishes{display:flex;flex-wrap:wrap;gap:4px 6px;list-style:none;padding:0;margin:8px 0 6px;font-size:12px}
+.dishes li{border-radius:6px;padding:3px 6px;background:#f1eadf;color:#382e22}
+.map-selection{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;padding:9px 12px;background:#fffcf7;border:1px solid #e6ddcc;border-radius:10px;font-size:13px}
+.map-selection[hidden]{display:none}.map-selection a{color:#79433a;font-weight:700;white-space:nowrap}
+@media(max-width:720px){.layout{grid-template-columns:1fr}.map{max-width:none}.pin{width:18px;height:18px;font-size:10px}.credit{font-size:8px}}
+
+main{max-width:1440px}.intro{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:end}.address{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:9px;background:#fee7a2;color:#33260d;font-weight:750;font-size:14px}
+.map-panel{position:relative;top:auto}.map-shell{position:relative;border:1px solid #c9c0ad;border-radius:16px;overflow:hidden;background:#e6e8df}
+#map{height:clamp(465px,68vh,760px);width:100%;font-family:system-ui,sans-serif;z-index:0;background:#e6e8df}
+.map-tools{position:absolute;top:12px;right:12px;z-index:500;display:grid;gap:7px;justify-items:end;pointer-events:none}.map-tools button,.map-tools output{pointer-events:auto;border-radius:8px;box-shadow:0 1px 5px #31281833;background:#fffdf8;padding:7px 10px;color:#272018;font-weight:750}
+.map-tools button:hover,.map-tools button:focus-visible{background:#ffedbb}.zoom-bar{display:flex;gap:4px}.zoom-bar button{width:35px;font-size:18px;line-height:1}.zoom-bar output{font-size:13px;min-width:56px;text-align:center;border:1px solid #cfc5b2}
+.office-marker,.food-marker,.overview-marker{background:transparent;border:0}
+.food-pin,.office-pin,.overview-pin{display:grid;place-items:center;color:#fff;border:2px solid white;font-weight:800;box-shadow:0 2px 6px #28221770}
+.food-pin{border-radius:50%;width:25px;height:25px;font-size:12px;background:var(--pin)}
+.office-pin{border-color:#fff9dc;background:#ffc642;color:#271702;border-radius:50%;width:35px;height:35px;font-size:22px}
+.overview-pin{border-radius:20px;background:#282319;padding:5px 8px;font-size:12px;white-space:nowrap}
+.leaflet-tooltip.office-label{background:#ffc642;color:#271702;border:1px solid #fff9dc;border-radius:7px;font-weight:850;font-size:13px;box-shadow:0 2px 6px #28221755}.leaflet-tooltip-left.office-label::before{border-left-color:#ffc642}
+.leaflet-popup-content h3{margin-bottom:3px}.leaflet-popup-content p{margin:6px 0}.leaflet-popup-content a{font-weight:700}.leaflet-popup-content .dishes{margin-top:7px}
+.list-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:23px 0 9px}.list-head h2{margin:0}.cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr))}
+.locate{margin-right:10px;margin-top:7px;padding:3px 7px;border-radius:6px;font-size:12px}.filters{margin-top:12px}article.active{outline:2px solid var(--pin)}.tile-note{margin:0;padding:8px 12px;font-size:13px;color:#564a40;background:#fff9e4}
+@media(max-width:640px){#map{height:clamp(400px,62vh,620px)}.map-tools{right:8px;top:8px}.map-tools button{padding:6px 8px}.intro{gap:8px}}
+
+.initial-map{position:relative;width:max-content;height:100%;max-width:100%;margin:auto}.initial-map img{display:block;height:100%;max-width:100%;object-fit:contain}.initial-office{position:absolute;left:43.64%;top:29.92%;border-radius:7px;background:#ffc642;padding:3px 6px;white-space:nowrap;font-weight:850;font-size:13px}.initial-map a{position:absolute;right:0;bottom:0;background:#fffdf0e8;padding:2px 5px;color:#343a35;font-size:10px}
+.map-shell:has(.initial-map) .map-tools{display:none}
+@font-face{font-family:MammaSerif;src:url(data:font/woff2;base64,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) format("woff2");font-weight:600;font-display:swap}
+.intro h1{font-family:MammaSerif,"Batang",serif;font-size:clamp(27px,3.4vw,37px);font-weight:600;letter-spacing:-.045em;line-height:1.24;color:#392d26}
+#kakao-map{height:clamp(465px,68vh,760px);width:100%;position:relative;z-index:0}
+#map[hidden],#kakao-map[hidden]{display:none}
+.kakao-pin{padding:0;cursor:pointer}.kakao-overview{transform:translateX(70px);padding:5px 8px}.kakao-office{position:relative}.kakao-office span{position:absolute;right:43px;top:7px;white-space:nowrap;border:1px solid #fff9dc;border-radius:7px;background:#ffc642;padding:1px 6px;color:#271702;font-size:13px;font-weight:850}.kakao-popup{min-width:195px;max-width:265px;padding:10px 14px;color:#272018}.kakao-popup p{margin:5px 0}.kakao-popup a{font-size:13px;font-weight:700;color:#6c3929}
+#kakao-setup{width:min(440px,calc(100% - 28px));border:1px solid #c9c0ad;border-radius:14px;background:#fffcf7;color:#272018;padding:20px}#kakao-setup::backdrop{background:#27201875}#kakao-setup p{margin:8px 0;font-size:14px}#kakao-setup label{font-size:14px;font-weight:700}#kakao-key{display:block;width:100%;margin:5px 0 10px;padding:8px;border:1px solid #c9c0ad;border-radius:7px;font:inherit}#kakao-status{color:#8b382c}.kakao-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+@media(max-width:640px){#kakao-map{height:clamp(400px,62vh,620px)}}
+</style><!-- Noto Serif KR font license
+Copyright 2012 Google Inc. All Rights Reserved.
+
+This Font Software is licensed under the SIL Open Font License,
+Version 1.1.
+
+This license is copied below, and is also available with a FAQ at:
+http://scripts.sil.org/OFL
+
+-----------------------------------------------------------
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font
+creation efforts of academic and linguistic communities, and to
+provide a free and open framework in which fonts may be shared and
+improved in partnership with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded,
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply to
+any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software
+components as distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to,
+deleting, or substituting -- in part or in whole -- any of the
+components of the Original Version, by changing formats or by porting
+the Font Software to a new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed,
+modify, redistribute, and sell modified and unmodified copies of the
+Font Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components, in
+Original or Modified Versions, may be sold by itself.
+
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the
+corresponding Copyright Holder. This restriction only applies to the
+primary font name as presented to the users.
+
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created using
+the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.
+
+--></head><body><main>
+<header class="intro"><div><h1>잠실 맘마지도</h1><p>롯데월드몰에서 걸어서 가는 저녁 맛집 10곳</p></div><span class="address">★ 롯데월드몰 · 송파구 올림픽로 300</span></header>
+<section class="map-panel" aria-label="잠실 맛집 지도">
+<div class="map-shell"><div id="kakao-map" aria-label="카카오 지도"><p class="map-msg">카카오 지도 불러오는 중…</p></div><div class="map-tools">
+<div class="zoom-bar" aria-label="지도 배율"><button id="zoom-out" aria-label="축소">−</button><output id="zoom-value" aria-label="현재 배율"></output><button id="zoom-in" aria-label="확대">+</button></div>
+<button id="district">식당 전체 보기</button><button id="office">★ 롯데몰로!</button>
+</div></div>
+
+<p class="note">지도를 드래그해 이동하고, 지도 위에서 마우스 휠로 확대·축소하세요. 확대할수록 골목 이름, 건물, 지하철 출구 등 등록된 정보가 더 보여요.</p>
+</section>
+<section><div class="list-head"><h2>식당 목록 <span id="count" aria-live="polite">10곳</span></h2><span class="sorts"><button id="sort" data-sort="near" aria-pressed="true">롯데몰에서 가까운 순</button><button id="sort-rating" data-sort="rating" aria-pressed="false">카카오맵 별점 순</button></span></div>
+<div class="filters" aria-label="메뉴별 필터"><button data-filter="all" aria-pressed="true">전체 10</button><button data-filter="0" aria-pressed="false"><span class="dot" style="--color:var(--g0)"></span>한식·고기</button><button data-filter="1" aria-pressed="false"><span class="dot" style="--color:var(--g1)"></span>일식</button><button data-filter="2" aria-pressed="false"><span class="dot" style="--color:var(--g2)"></span>술집·펍</button><button data-filter="3" aria-pressed="false"><span class="dot" style="--color:var(--g3)"></span>양식</button><button data-filter="near" aria-pressed="false">도보 10분 이내</button></div>
+<div class="cards"><article id="p1" data-group="0" data-min="8" style="--pin:var(--g0)" data-rating="4.7" data-reviews="265"><div class="line"><span class="badge">1</span><div><h3>송돝</h3><strong>삼겹살 · 목살</strong></div><span class="dish-icon" aria-hidden="true">🥩</span></div><ul class="dishes"><li>한돈생삼겹살 17,000원</li><li>한돈통목살 17,000원</li></ul><p>서울 송파구 오금로13길 7 1층</p><p class="walk">롯데월드몰에서 도보 약 8분 · 563m</p><p class="rating"><b>★ 4.7</b> 카카오맵 후기 265개</p><button type="button" class="locate">지도에서 보기</button><a href="https://place.map.kakao.com/854818061" target="_blank" rel="noopener">카카오맵에서 보기 ↗</a></article>
+<article id="p2" data-group="1" data-min="9" style="--pin:var(--g1)" data-rating="4.2" data-reviews="137"><div class="line"><span class="badge">2</span><div><h3>청화초밥</h3><strong>초밥</strong></div><span class="dish-icon" aria-hidden="true">🍣</span></div><ul class="dishes"><li>청화초밥+우동 16,000원</li><li>스페셜초밥+구이+우동 23,000원</li></ul><p>서울 송파구 오금로13길 14 1층</p><p class="walk">롯데월드몰에서 도보 약 9분 · 641m</p><p class="rating"><b>★ 4.2</b> 카카오맵 후기 137개</p><button type="button" class="locate">지도에서 보기</button><a href="https://place.map.kakao.com/24506079" target="_blank" rel="noopener">카카오맵에서 보기 ↗</a></article>
+<article id="p3" data-group="3" data-min="9" style="--pin:var(--g3)" data-rating="4.1" data-reviews="335"><div class="line"><span class="badge">3</span><div><h3>엘리스리틀이태리</h3><strong>이탈리안</strong></div><span class="dish-icon" aria-hidden="true">🍝</span></div><ul class="dishes"><li>제철생선오일파스타 28,000원</li><li>마르게리따 디 부팔라 25,000원</li></ul><p>서울 송파구 백제고분로41길 43-21 1층</p><p class="walk">롯데월드몰에서 도보 약 9분 · 663m</p><p class="rating"><b>★ 4.1</b> 카카오맵 후기 335개</p><button type="button" class="locate">지도에서 보기</button><a href="https://place.map.kakao.com/27311545" target="_blank" rel="noopener">카카오맵에서 보기 ↗</a></article>
+<article id="p4" data-group="3" data-min="10" style="--pin:var(--g3)" data-rating="4.3" data-reviews="399"><div class="line"><span class="badge">4</span><div><h3>피제리아라고</h3><strong>피자 · 리조또</strong></div><span class="dish-icon" aria-hidden="true">🍕</span></div><ul class="dishes"><li>더블 엑스트라 마르게리따 25,000원</li><li>감베로니 크레마 20,800원</li></ul><p>서울 송파구 백제고분로41길 39 1층</p><p class="walk">롯데월드몰에서 도보 약 10분 · 684m</p><p class="rating"><b>★ 4.3</b> 카카오맵 후기 399개</p><button type="button" class="locate">지도에서 보기</button><a href="https://place.map.kakao.com/85237296" target="_blank" rel="noopener">카카오맵에서 보기 ↗</a></article>
+<article id="p5" data-group="2" data-min="10" style="--pin:var(--g2)" data-rating="4.8" data-reviews="178"><div class="line"><span class="badge">5</span><div><h3>라디오헤드펍</h3><strong>요리주점</strong></div><span class="dish-icon" aria-hidden="true">🍺</span></div><ul class="dishes"><li>피쉬앤칩스 22,000원</li><li>고기라구파스타 23,000원</li></ul><p>서울 송파구 올림픽로32길 22-6 2층</p><p class="walk">롯데월드몰에서 도보 약 10분 · 694m</p><p class="rating"><b>★ 4.8</b> 카카오맵 후기 178개</p><button type="button" class="locate">지도에서 보기</button><a href="https://place.map.kakao.com/188105400" target="_blank" rel="noopener">카카오맵에서 보기 ↗</a></article>
+<article id="p6" data-group="0" data-min="11" style="--pin:var(--g0)" data-rating="4.6" data-reviews="707"><div class="line"><span class="badge">6</span><div><h3>메밀집</h3><strong>메밀 · 한식</strong></div><span class="dish-icon" aria-hidden="true">🥢</span></div><ul class="dishes"><li>초계 메밀 물 막국수 11,600원</li><li>트러플 감자전 17,600원</li></ul><p>서울 송파구 백제고분로45길 36 1층</p><p class="walk">롯데월드몰에서 도보 약 11분 · 792m</p><p class="rating"><b>★ 4.6</b> 카카오맵 후기 707개</p><button type="button" class="locate">지도에서 보기</button><a href="https://place.map.kakao.com/756146413" target="_blank" rel="noopener">카카오맵에서 보기 ↗</a></article>
+<article id="p7" data-group="0" data-min="12" style="--pin:var(--g0)" data-rating="4.2" data-reviews="146"><div class="line"><span class="badge">7</span><div><h3>육장정</h3><strong>육개장 · 국밥</strong></div><span class="dish-icon" aria-hidden="true">🍲</span></div><ul class="dishes"><li>육개장 10,000원</li><li>육갈탕 15,000원</li></ul><p>서울 송파구 오금로16길 9-1 1층</p><p class="walk">롯데월드몰에서 도보 약 12분 · 827m</p><p class="rating"><b>★ 4.2</b> 카카오맵 후기 146개</p><button type="button" class="locate">지도에서 보기</button><a href="https://place.map.kakao.com/309142826" target="_blank" rel="noopener">카카오맵에서 보기 ↗</a></article>
+<article id="p8" data-group="3" data-min="12" style="--pin:var(--g3)" data-rating="4.8" data-reviews="113"><div class="line"><span class="badge">8</span><div><h3>올더웨이</h3><strong>수제버거</strong></div><span class="dish-icon" aria-hidden="true">🍔</span></div><ul class="dishes"><li>더블 올더웨이버거 8,400원</li><li>스파이시 슈비버거 9,100원</li></ul><p>서울 송파구 백제고분로41길 25 101호</p><p class="walk">롯데월드몰에서 도보 약 12분 · 839m</p><p class="rating"><b>★ 4.8</b> 카카오맵 후기 113개</p><button type="button" class="locate">지도에서 보기</button><a href="https://place.map.kakao.com/528967427" target="_blank" rel="noopener">카카오맵에서 보기 ↗</a></article>
+<article id="p9" data-group="1" data-min="12" style="--pin:var(--g1)" data-rating="4.3" data-reviews="122"><div class="line"><span class="badge">9</span><div><h3>보길</h3><strong>솥밥</strong></div><span class="dish-icon" aria-hidden="true">🍚</span></div><ul class="dishes"><li>보길도 참전복 솥밥 21,000원</li><li>스테이크 솥밥 23,000원</li></ul><p>서울 송파구 오금로16길 10-8 1층 101호</p><p class="walk">롯데월드몰에서 도보 약 12분 · 845m</p><p class="rating"><b>★ 4.3</b> 카카오맵 후기 122개</p><button type="button" class="locate">지도에서 보기</button><a href="https://place.map.kakao.com/1895960161" target="_blank" rel="noopener">카카오맵에서 보기 ↗</a></article>
+<article id="p10" data-group="0" data-min="16" style="--pin:var(--g0)" data-rating="4.7" data-reviews="164"><div class="line"><span class="badge">10</span><div><h3>무궁화정육식당</h3><strong>정육식당 · 한우</strong></div><span class="dish-icon" aria-hidden="true">🥩</span></div><ul class="dishes"><li>1++ 한우모듬 100g 13,500원</li><li>청도미나리육회 19,000원</li></ul><p>서울 송파구 송파대로49길 59 1층</p><p class="walk">롯데월드몰에서 도보 약 16분 · 1,139m</p><p class="rating"><b>★ 4.7</b> 카카오맵 후기 164개</p><button type="button" class="locate">지도에서 보기</button><a href="https://place.map.kakao.com/2011242776" target="_blank" rel="noopener">카카오맵에서 보기 ↗</a></article></div></section>
+<p class="note">도보 거리와 시간은 롯데월드몰에서 출발하는 <a href="https://routing.openstreetmap.de/about.html">OpenStreetMap 보행 경로</a> 기준으로 추정했어요. 시간은 분 단위로 올림했어요. 카카오맵 별점 4.0 이상·후기 100개 이상이면서, 카카오맵에서 다른 지역 지점이 검색되지 않는 가게만 골랐어요. 메뉴와 가격은 카카오맵을 참고했고, 별점은 2026년 11월 26일 카카오맵 기준이에요.</p>
+</main><style>article[data-group="0"]{--pin-text:var(--t0)}article[data-group="1"]{--pin-text:var(--t1)}article[data-group="2"]{--pin-text:var(--t2)}article[data-group="3"]{--pin-text:var(--t3)}article strong,article a{color:var(--pin-text)!important}.pin,.badge,.food-pin{color:#2b2118!important}.office-pin svg{display:block}.sorts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}.rating b{color:#c7820f}.kakao-popup .rating{margin:4px 0}#kakao-map .map-msg{margin:0;position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;font-size:14px;color:#5b5145;background:#f3efe6}</style><script>
+const KAKAO_JS_KEY = '27ea734a117fafc0986776b2e904a87c';
+const office = [127.1029,37.5125].slice().reverse();
+const walk = [{"point": [127.10838624838148, 37.51332728309074], "minutes": 8, "meters": 563}, {"point": [127.1093228635641, 37.51337327212097], "minutes": 9, "meters": 641}, {"point": [127.1048325704468, 37.508638061414814], "minutes": 9, "meters": 663}, {"point": [127.10588259905906, 37.50894707037011], "minutes": 10, "meters": 684}, {"point": [127.10911568636769, 37.514022186285224], "minutes": 10, "meters": 694}, {"point": [127.10781705099913, 37.510790577135154], "minutes": 11, "meters": 792}, {"point": [127.10883919680533, 37.51056258670462], "minutes": 12, "meters": 827}, {"point": [127.10693086779905, 37.50801628951476], "minutes": 12, "meters": 839}, {"point": [127.10836926732902, 37.51097027260683], "minutes": 12, "meters": 845}, {"point": [127.09820099779687, 37.50576775374854], "minutes": 16, "meters": 1139}];
+const districtGeometry = {"type": "Polygon", "coordinates": [[[127.09820099779687, 37.50576775374854], [127.1093228635641, 37.50576775374854], [127.1093228635641, 37.514022186285224], [127.09820099779687, 37.514022186285224], [127.09820099779687, 37.50576775374854]]]};
+const cards = [...document.querySelectorAll('article')];
+const filters = [...document.querySelectorAll('[data-filter]')];
+const list = document.querySelector('.cards');
+const offsetPins = new Map([]);
+const target = document.getElementById('kakao-map');
+const controls = ['office','district','zoom-in','zoom-out'].map(id=>document.getElementById(id));
+const zoomOutput = document.getElementById('zoom-value');
+let kakaoMode = null;
+
+filters.forEach(button=>button.onclick=()=>{
+  const value=button.dataset.filter;
+  cards.forEach(card=>{card.hidden=!(value==='all'||value===card.dataset.group||(value==='near'&&Number(card.dataset.min)<=10));});
+  filters.forEach(item=>item.setAttribute('aria-pressed',item===button));
+  document.getElementById('count').textContent=cards.filter(card=>!card.hidden).length+'곳';
+  if(kakaoMode){kakaoMode.popup.close();kakaoMode.refresh();}
+});
+const sortButtons=[...document.querySelectorAll('[data-sort]')];
+const ratingOf=card=>card.dataset.rating?Number(card.dataset.rating):-1;
+function applySort(mode){
+  sortButtons.forEach(button=>button.setAttribute('aria-pressed',button.dataset.sort===mode));
+  const order=cards.map((card,i)=>({card,i}));
+  if(mode==='near') order.sort((a,b)=>walk[a.i].meters-walk[b.i].meters);
+  if(mode==='rating') order.sort((a,b)=>(ratingOf(b.card)-ratingOf(a.card))||(Number(b.card.dataset.reviews)-Number(a.card.dataset.reviews))||(a.i-b.i));
+  order.forEach(({card})=>list.append(card));
+}
+sortButtons.forEach(button=>button.onclick=()=>applySort(button.dataset.sort));
+cards.forEach((card,i)=>card.querySelector('.locate').addEventListener('click',()=>{
+  if(!kakaoMode) return;
+  const {kakaoMap,pins}=kakaoMode;
+  kakaoMap.setLevel(Math.min(2,kakaoMap.getLevel()));
+  kakaoMap.setCenter(pins[i].pos);
+  pins[i].open();
+  document.querySelector('.map-shell').scrollIntoView({block:'nearest'});
+}));
+
+function loadMaps(key){
+  return new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    const timeout=setTimeout(()=>reject(new Error('timeout')),15000);
+    script.src='https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey='+encodeURIComponent(key);
+    script.onload=()=>{
+      if(typeof window.kakao?.maps?.load!=='function'){clearTimeout(timeout);reject(new Error('sdk'));return;}
+      window.kakao.maps.load(()=>{clearTimeout(timeout);resolve(window.kakao.maps);});
+    };
+    script.onerror=()=>{clearTimeout(timeout);reject(new Error('network'));};
+    document.head.append(script);
+  });
+}
+  function createKakaoMode(maps) {
+    const officePoint = new maps.LatLng(...office);
+    const kakaoMap = new maps.Map(target,{center:officePoint,level:3,draggable:true,scrollwheel:true});
+    const bounds = new maps.LatLngBounds();
+    for (const ring of districtGeometry.coordinates) for (const [lon,lat] of ring) bounds.extend(new maps.LatLng(lat,lon));
+    const popup = new maps.InfoWindow({removable:true,disableAutoPan:false});
+    function showPopup(point,content){
+      popup.close();
+      popup.setPosition(point);
+      popup.setContent(content);
+      popup.open(kakaoMap);
+    }
+    const overlay = (content,point,zIndex)=>new maps.CustomOverlay({position:point,content,clickable:true,xAnchor:.5,yAnchor:.5,zIndex});
+    const officePin = document.createElement('button');
+    officePin.type='button';
+    officePin.className='office-pin kakao-pin';
+    officePin.innerHTML='<svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path fill="currentColor" d="M12.00 2.95L14.25 9.86L21.51 9.86L15.63 14.14L17.88 21.05L12.00 16.77L6.12 21.05L8.37 14.14L2.49 9.86L9.75 9.86Z"/></svg>';
+    officePin.setAttribute('aria-label','롯데월드몰');
+    officePin.onclick=()=>showPopup(officePoint,'<div class="kakao-popup"><h3>★ 롯데월드몰</h3><p>서울 송파구 올림픽로 300</p></div>');
+    const officeWrap = document.createElement('div');
+    officeWrap.className='kakao-office';
+    officeWrap.append(officePin);
+    const officeLabel = document.createElement('span');
+    officeLabel.textContent='롯데월드몰';
+    officeWrap.append(officeLabel);
+    overlay(officeWrap,officePoint,90).setMap(kakaoMap);
+    const pins = cards.map((card,index)=>{
+      const [lon,lat]=walk[index].point;
+      const pos = new maps.LatLng(lat,lon);
+      const name = card.querySelector('h3').textContent;
+      const pin = document.createElement('button');
+      pin.type='button';
+      pin.className='food-pin kakao-pin';
+      pin.style.setProperty('--pin','var(--g'+card.dataset.group+')');
+      pin.textContent=String(index+1);
+      pin.setAttribute('aria-label',name);
+      const offset = offsetPins.get(index);
+      if(offset) pin.style.transform='translate('+offset[0]+'px,'+offset[1]+'px)';
+      const content = document.createElement('div');
+      content.className='kakao-popup';
+      for(const selector of ['h3','.walk','.rating','.dishes','a']) content.append(card.querySelector(selector).cloneNode(true));
+      const open = ()=>showPopup(pos,content);
+      pin.onclick=open;
+      return {marker:overlay(pin,pos,20),open,pos};
+    });
+    const summaryPin = document.createElement('button');
+    summaryPin.type='button';
+    summaryPin.className='overview-pin kakao-pin kakao-overview';
+    summaryPin.onclick=districtView;
+    const summaryOverlay = overlay(summaryPin,officePoint,80);
+    function refresh(){
+      const level = kakaoMap.getLevel();
+      const detailed = level<=5;
+      let count=0;
+      pins.forEach((pin,i)=>{
+        if(!cards[i].hidden) count++;
+        pin.marker.setMap(detailed&&!cards[i].hidden?kakaoMap:null);
+      });
+      summaryPin.textContent='식당 '+count+'곳 ↗';
+      summaryOverlay.setMap(!detailed&&count?kakaoMap:null);
+      zoomOutput.textContent=(100*2**(3-level)).toLocaleString('ko-KR',{maximumFractionDigits:1})+'%';
+      controls[2].disabled=level<=1;
+      controls[3].disabled=level>=14;
+    }
+    function officeView(){
+      popup.close();
+      kakaoMap.setLevel(3);
+      kakaoMap.setCenter(officePoint);
+      refresh();
+    }
+    function districtView(){
+      popup.close();
+      kakaoMap.setBounds(bounds,24,24,24,24);
+      refresh();
+    }
+    maps.event.addListener(kakaoMap,'zoom_changed',refresh);
+    maps.event.addListener(kakaoMap,'click',()=>popup.close());
+    return {kakaoMap,popup,pins,refresh,actions:[officeView,districtView,()=>kakaoMap.setLevel(kakaoMap.getLevel()-1),()=>kakaoMap.setLevel(kakaoMap.getLevel()+1)]};
+  }
+loadMaps(KAKAO_JS_KEY).then(maps=>{
+  target.innerHTML='';
+  kakaoMode=createKakaoMode(maps);
+  controls.forEach((button,i)=>button.onclick=kakaoMode.actions[i]);
+  const officePoint=new maps.LatLng(...office);
+  controls[0].onclick=()=>{kakaoMode.popup.close();kakaoMode.kakaoMap.panTo(officePoint);};
+  kakaoMode.actions[1]();
+}).catch(()=>{
+  const local=!/^https?:$/.test(location.protocol);
+  target.querySelector('.map-msg').textContent=local
+    ? '카카오 지도는 공유 링크로 열어야 보여요. (파일을 더블클릭해서 열면 안 떠요)'
+    : '카카오 지도를 불러오지 못했어요. 잠시 후 새로고침해 주세요.';
+});
+</script></body></html>
