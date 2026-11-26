@@ -831,7 +831,7 @@ const districtGeometry = {"type": "Polygon", "coordinates": [[[127.0982009977968
 const cards = [...document.querySelectorAll('article')];
 const filters = [...document.querySelectorAll('[data-filter]')];
 const list = document.querySelector('.cards');
-const offsetPins = new Map([]);
+const offsetPins = new Map([[0,[-8,6]],[1,[8,6]],[4,[4,-14]],[8,[0,-18]],[5,[-14,6]],[6,[12,6]],[2,[-6,4]],[3,[4,-4]]]);
 const target = document.getElementById('kakao-map');
 const controls = ['office','district','zoom-in','zoom-out'].map(id=>document.getElementById(id));
 const zoomOutput = document.getElementById('zoom-value');
@@ -949,6 +949,7 @@ function loadMaps(key){
     function districtView(){
       popup.close();
       kakaoMap.setBounds(bounds,24,24,24,24);
+      if(kakaoMap.getLevel()>5) kakaoMap.setLevel(5);
       refresh();
     }
     maps.event.addListener(kakaoMap,'zoom_changed',refresh);
