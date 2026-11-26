@@ -945,8 +945,8 @@ function loadMaps(key){
       summaryPin.textContent='식당 '+count+'곳 ↗';
       summaryOverlay.setMap(!detailed&&count?kakaoMap:null);
       zoomOutput.textContent=(100*2**(3-level)).toLocaleString('ko-KR',{maximumFractionDigits:1})+'%';
-      controls[2].disabled=level>=14;
-      controls[3].disabled=level<=1;
+      controls[2].disabled=level<=1;
+      controls[3].disabled=level>=14;
     }
     function officeView(){
       popup.close();
@@ -961,7 +961,7 @@ function loadMaps(key){
     }
     maps.event.addListener(kakaoMap,'zoom_changed',refresh);
     maps.event.addListener(kakaoMap,'click',()=>popup.close());
-    return {kakaoMap,popup,pins,refresh,actions:[officeView,districtView,()=>kakaoMap.setLevel(kakaoMap.getLevel()+1),()=>kakaoMap.setLevel(kakaoMap.getLevel()-1)]};
+    return {kakaoMap,popup,pins,refresh,actions:[officeView,districtView,()=>kakaoMap.setLevel(kakaoMap.getLevel()-1),()=>kakaoMap.setLevel(kakaoMap.getLevel()+1)]};
   }
 loadMaps(KAKAO_JS_KEY).then(maps=>{
   target.innerHTML='';
